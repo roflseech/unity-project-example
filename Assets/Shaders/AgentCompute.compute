@@ -1,0 +1,132 @@
+#pragma kernel CSMain
+
+struct AgentData
+{
+    float3 position;
+    float3 velocity;
+    float3 target;
+    float maxSpeed;
+    float maxForce;
+    float separationRadius;
+    float arrivalRadius;
+};
+
+RWStructuredBuffer<AgentData> agents;
+RWStructuredBuffer<float4x4> transformMatrices;
+
+uint agentCount;
+float deltaTime;
+float separationWeight;
+float seekWeight;
+float3 globalTarget;
+
+float3 limit(float3 vec, float maxMagnitude)
+{
+    float magnitude = length(vec);
+    if (magnitude > maxMagnitude && magnitude > 0.0)
+    {
+        return (vec / magnitude) * maxMagnitude;
+    }
+    return vec;
+}
+
+float3 seek(float3 position, float3 velocity, float3 target, float maxSpeed, float maxForce)
+{
+    float3 flatPosition = float3(position.x, 0, position.z);
+    float3 flatTarget = float3(target.x, 0, target.z);
+    
+    float3 desired = flatTarget - flatPosition;
+    float distance = length(desired);
+    
+    if (distance > 0.01)
+    {
+        desired = normalize(desired) * maxSpeed;
+        desired.y = 0;
+        float3 flatVelocity = float3(velocity.x, 0, velocity.z);
+        float3 steer = desired - flatVelocity;
+        steer.y = 0;
+        return limit(steer, maxForce);
+    }
+    return float3(0, 0, 0);
+}
+
+float3 separate(uint agentIndex, float3 position, float separationRadius, float maxSpeed, float maxForce)
+{
+    float3 steer = float3(0, 0, 0);
+    int count = 0;
+    
+    float3 flatPosition = float3(position.x, 0, position.z);
+    
+    for (uint i = 0; i < agentCount; i += 4)
+    {
+        if (i != agentIndex && i < agentCount)
+        {
+            float3 otherPos = agents[i].position;
+            float3 flatOtherPos = float3(otherPos.x, 0, otherPos.z);
+            float distance = length(flatPosition - flatOtherPos);
+            
+            if (distance > 0.01 && distance < separationRadius)
+            {
+                float3 diff = (flatPosition - flatOtherPos) / distance;
+                diff = diff / distance;
+                diff.y = 0;
+                steer += diff;
+                count++;
+            }
+        }
+    }
+    
+    if (count > 0)
+    {
+        steer = steer / (float)count;
+        steer.y = 0;
+        if (length(steer) > 0.01)
+        {
+            steer = normalize(steer) * maxSpeed;
+            float3 flatVelocity = float3(agents[agentIndex].velocity.x, 0, agents[agentIndex].velocity.z);
+            steer = steer - flatVelocity;
+            steer.y = 0;
+            steer = limit(steer, maxForce);
+        }
+    }
+    
+    return steer;
+}
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= agentCount) return;
+    
+    uint agentIndex = id.x;
+    AgentData agent = agents[agentIndex];
+    
+    agent.target = float3(globalTarget.x, agent.position.y, globalTarget.z);
+
+    float3 separationForce = separate(agentIndex, agent.position, agent.separationRadius, agent.maxSpeed, agent.maxForce);
+    float3 seekForce = seek(agent.position, agent.velocity, agent.target, agent.maxSpeed, agent.maxForce);
+
+    float3 totalForce = separationForce * separationWeight + seekForce * seekWeight;
+
+    totalForce.y = 0;
+
+    agent.velocity += totalForce * deltaTime;
+
+    agent.velocity.y = 0;
+    agent.velocity = limit(agent.velocity, agent.maxSpeed);
+
+    agent.position += agent.velocity * deltaTime;
+
+    float bounds = 50.0;
+    agent.position.x = clamp(agent.position.x, -bounds, bounds);
+    agent.position.z = clamp(agent.position.z, -bounds, bounds);
+
+    agents[agentIndex] = agent;
+
+    float4x4 mat = transformMatrices[agentIndex];
+    mat._m03 = agent.position.x;
+    mat._m13 = agent.position.y;
+    mat._m23 = agent.position.z;
+    
+    transformMatrices[agentIndex] = mat;
+}

@@ -1,0 +1,28 @@
+{
+    "name": "AppFlow",
+    "rootNamespace": "",
+    "references": [
+        "GUID:da04132a78d6a944aae5d81895f4795e",
+        "GUID:61934763b21ba0e40924a70ab26dab48",
+        "GUID:77f02654db3ff5c4bba2dd0fcf3a1c8e",
+        "GUID:560b04d1a97f54a4e82edc0cbbb69285",
+        "GUID:b0214a6008ed146ff8f122a6a9c2f6cc",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:ad856df156431ac42895dd60e627e35e",
+        "GUID:8f35a78dab5008b4dace7be516f60e05",
+        "GUID:1bf46300d7e091e44bcb47ff5fa7076d",
+        "GUID:ae7de04bb5905f34d857d84c8e13501e",
+        "GUID:6beda9e3e8a1d414b9b62dda03aacac7",
+        "GUID:8a793a4fd12abe045b47ce9f96c54f79",
+        "GUID:dc77a5c36f9e9a34ea3646d1b41351fb"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

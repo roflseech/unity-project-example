@@ -1,0 +1,178 @@
+#pragma kernel CSMain
+
+struct CloudData
+{
+    float3 position;
+    float3 homePosition;
+    float3 velocity;
+    float scaleVelocity;
+    float scale;
+};
+
+//todo: agent radius
+struct AgentData
+{
+    float3 position;
+    float revealDistance;
+    float shiftDistance;
+    float shiftHeight;
+};
+
+RWStructuredBuffer<CloudData> clouds;
+RWStructuredBuffer<float4x4> cloudTransforms;
+StructuredBuffer<AgentData> agents;
+
+uint cloudCount;
+uint agentCount;
+float deltaTime;
+float avoidanceDistance;
+float maxVelocity;
+float acceleration;
+float revealHeight;
+float scaleAcceleration;
+float maxScaleVelocity;
+float cloudScale;
+
+float3 limit(float3 vec, float maxMagnitude)
+{
+    //TODO: check performance without if
+    float magnitude = length(vec);
+    if (magnitude > maxMagnitude && magnitude > 0.0)
+    {
+        return (vec / magnitude) * maxMagnitude;
+    }
+    return vec;
+}
+
+float moveTo(float current, float target, float maxDelta)
+{
+    float delta = target - current;
+    float dir = sign(delta);
+    float deltaAbs = abs(delta);
+
+    float finalDelta = min(maxDelta, deltaAbs);
+    
+    return current + dir * finalDelta;
+}
+
+float3 moveTo(float3 current, float3 target, float maxDelta)
+{
+    //todo: check how to optimize
+    float3 delta = target - current;
+    float deltaLen = length(delta);
+
+    if (deltaLen < 0.001f) return target;
+
+    float3 dir = delta / deltaLen;
+
+    return current + dir * min(deltaLen, maxDelta);
+}
+
+
+void getTargetParameters(float3 cloudHomePos, out float3 targetPos, out float targetScale)
+{
+    float closestDistanceRatio = -1;
+
+    targetPos = cloudHomePos;
+    targetScale = 1.0f;
+    
+    for (uint i = 0; i < agentCount; i++)
+    {
+        float3 agentPos = agents[i].position;
+        float dist = distance(agentPos, cloudHomePos);
+
+        float shiftContactDistance = avoidanceDistance + agents[i].shiftDistance;
+        
+        if (agents[i].shiftDistance > 0.0f &&
+            dist < shiftContactDistance)
+        {
+            float distanceRatio = (shiftContactDistance - dist) / shiftContactDistance;
+            
+            if (closestDistanceRatio < 0) closestDistanceRatio = distanceRatio;
+            else
+            {
+                closestDistanceRatio = max(closestDistanceRatio, distanceRatio);
+            }
+        }
+
+        float revealContactDistance = avoidanceDistance + agents[i].revealDistance;
+        if (agents[i].revealDistance > 0.0f &&
+            dist < revealContactDistance)
+        {
+            targetScale = 0.0f;
+        }
+    }
+
+    if (closestDistanceRatio >= 0)
+    {
+        targetPos = cloudHomePos + float3(0, revealHeight * closestDistanceRatio , 0);
+    }
+}
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= cloudCount) return;
+    
+    uint cloudIndex = id.x;
+    CloudData cloud = clouds[cloudIndex];
+
+    float3 currentPos = cloud.position;
+    float3 homePosition = cloud.homePosition;
+    
+    float3 targetPos;
+    float targetScale;
+    
+    getTargetParameters(homePosition, targetPos, targetScale);
+    
+    float3 velocity = cloud.velocity;
+    float3 targetVelocity;
+    if (length(targetPos - currentPos) < 0.5f)
+    {
+        targetVelocity = float3(0, 0, 0);
+    }
+    else
+    {
+        targetVelocity = normalize(targetPos - currentPos) * maxVelocity;
+    }
+    float3 newVelocity = moveTo(velocity, targetVelocity, acceleration * deltaTime);
+    
+    cloud.velocity = newVelocity;
+    cloud.position += cloud.velocity * deltaTime;
+
+    float currentScale = cloud.scale;
+    float scaleVelocity = cloud.scaleVelocity;
+    float targetScaleVelocity;
+    if (abs(targetScale - currentScale) < 0.01f)
+    {
+        targetScaleVelocity = 0.0f;
+    }
+    else
+    {
+        targetScaleVelocity = sign(targetScale - currentScale) * maxScaleVelocity;
+    }
+    float newScaleVelocity = moveTo(scaleVelocity, targetScaleVelocity, maxScaleVelocity * deltaTime);
+    cloud.scaleVelocity = newScaleVelocity;
+    cloud.scale += cloud.scaleVelocity * deltaTime;
+    if (targetScale == 0.0f && cloud.scale <= 0.0f)
+    {
+        cloud.scale = 0.0f;
+        cloud.scaleVelocity = 0.0f;
+    }
+    if (targetScale > 0.0f && cloud.scale >= targetScale)
+    {
+        cloud.scale = targetScale;
+        cloud.scaleVelocity = 0.0f;
+    }
+    clouds[cloudIndex] = cloud;
+    
+    float4x4 mat = cloudTransforms[cloudIndex];
+    mat._m03 = cloud.position.x;
+    mat._m13 = cloud.position.y;
+    mat._m23 = cloud.position.z;
+
+    mat._m00 = cloud.scale * cloudScale;
+    mat._m11 = cloud.scale * cloudScale;
+    mat._m22 = cloud.scale * cloudScale;
+    cloudTransforms[cloudIndex] = mat;
+}

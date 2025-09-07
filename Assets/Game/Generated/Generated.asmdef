@@ -1,0 +1,17 @@
+{
+    "name": "Generated",
+    "rootNamespace": "",
+    "references": [
+        "GUID:dc77a5c36f9e9a34ea3646d1b41351fb",
+        "GUID:903dc1521e2b98a4cb939f5e507a2f62"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

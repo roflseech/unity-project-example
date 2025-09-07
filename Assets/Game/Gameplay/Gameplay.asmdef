@@ -1,0 +1,25 @@
+{
+    "name": "Gameplay",
+    "rootNamespace": "",
+    "references": [
+        "GUID:560b04d1a97f54a4e82edc0cbbb69285",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:b0214a6008ed146ff8f122a6a9c2f6cc",
+        "GUID:77f02654db3ff5c4bba2dd0fcf3a1c8e",
+        "GUID:61934763b21ba0e40924a70ab26dab48",
+        "GUID:4307f53044263cf4b835bd812fc161a4",
+        "GUID:da04132a78d6a944aae5d81895f4795e",
+        "GUID:0a8d0b1df9e2dbb44aa46a7f02c1839b",
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "Models"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

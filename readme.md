@@ -1,6 +1,6 @@
-# Survival Game
+# Unity Project Example
 
-This is showcasing project, that demonstrates production-ready practices for Unity game development, including project structure and architecture, asset management, config management, various domains inter-communications (there is even compute shader cloud system!)
+This is showcasing project, that demonstrates production-ready practices for Unity game development, including project structure and architecture, asset management, config management, and typescript configs for static data and logic which can be used by gamedesigners.
 
 ## Who might be interested in this project:
 
@@ -14,7 +14,6 @@ This is showcasing project, that demonstrates production-ready practices for Uni
 - **Component-based approach** for gameplay
 - **TypeScript configs**
 - **Code-Generation**
-- **Compute shaders**
 
 ## Technologies
 
@@ -28,20 +27,21 @@ This is showcasing project, that demonstrates production-ready practices for Uni
 
 ---
 
-## Domain-Split Architecture
+## Structure
 
 Project is split into different domains, each containing strict set of responsibilities. It makes it easier to find specific code in project, or place where to put new classes. each domain has it's own assembly definition and references only the ones that are necessary. 
 
-AppFlow - entry points and containers that build all required classes and depebdencies for game to work
+AppFlow - entry points and containers that build all required classes and dependencies for game to work
 
 Models - data domain of game - classes that store data, including generated classes and functions from TS to query data, and including runtime session data and logic
+
+Models - data and domain logic classes
 
 UI.Presenters - presentation domain of ui - presenters, which depend on various data and models from UI.Models
 
 UI.Models - model domain of ui - models and business logic related to ui. Has no knowledge regarding prefabs or predenters that use them.
 
 Gameplay - entities and components required for game, all the game logic that doesn't fit into ui logic or session-long logic
-
 
 
 
@@ -63,6 +63,46 @@ Therefore, for this project classic component-based approach was chosen, but wit
 ## TypeScript Configs
 
 TypeScript is used to configure every in-game entity, that does not have to be inside scriptable object.
+
+Example:
+Define data and functions in TS
+
+```
+export interface IPlayerParams
+{
+    speed: float;
+    inventorySize: int;
+}
+function getPlayerParams(): IPlayerParams
+{
+    return { speed: 10.0, inventorySize: 6 };
+}
+```
+Call in C#:
+```
+public readonly struct PlayerParams
+{
+    public readonly float Speed;
+    public readonly int InventorySize;
+
+    public PlayerParams(
+        float speed,
+        int inventorySize
+    )
+    {
+        Speed = speed;
+        InventorySize = inventorySize;
+    }
+}
+public class GetPlayerParams : BaseQuery
+{
+
+    public PlayerParams Execute()
+    {
+        return ExecuteJsFunction<PlayerParams>("getPlayerParams", new object[] {  }, x => x.AsPlayerParams());
+    }
+}
+```
 
 **Such as:**
 - Character stats
